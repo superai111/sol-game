@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sol Mini Game</title>
+  <style>
+    body {
+      background:#0b0f19;
+      color:#fff;
+      font-family:Arial;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+    }
+    .box {
+      background:#151a2d;
+      padding:20px;
+      border-radius:12px;
+      width:320px;
+      text-align:center;
+    }
+    button {
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      background:#6c5ce7;
+      border:none;
+      border-radius:8px;
+      color:#fff;
+      font-size:16px;
+    }
+    .msg { margin-top:15px; }
+  </style>
+</head>
+<body>
+<div class="box">
+  <h2>🎮 Sol Mini Game</h2>
+  <button onclick="connect()">Connect Phantom</button>
+  <button onclick="play()">Play (0.001 SOL)</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+<script>
+const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = solanaWeb3;
+
+const connection = new Connection("https://api.devnet.solana.com");
+const GAME_WALLET = new PublicKey("Dz73z9YtS5F6DwN8U3wuhhYGi2DiTjavvNbTcVTau3W6");
+
+let wallet = null;
+
+async function connect() {
+  if (!window.solana) return alert("Cài Phantom trước");
+  wallet = await window.solana.connect();
+  msg("Đã kết nối: " + wallet.publicKey.toString());
+}
+
+async function play() {
+  if (!wallet) return alert("Chưa connect ví");
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: wallet.publicKey,
+      toPubkey: GAME_WALLET,
+      lamports: 0.001 * LAMPORTS_PER_SOL
+    })
+  );
+
+  const sig = await window.solana.signAndSendTransaction(tx);
+  await connection.confirmTransaction(sig.signature);
+
+  const win = Math.random() < 0.5;
+  msg(win ? "🎉 YOU WIN" : "❌ YOU LOSE");
+}
+
+function msg(t){ document.getElementById("msg").innerText = t; }
+</script>
+</body>
+</html>
