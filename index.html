@@ -3,22 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <title>Sol Mini Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     body {
-      margin: 0;
-      height: 100vh;
       background: #0b0f19;
       color: #fff;
       font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
+      height: 100vh;
+      margin: 0;
     }
 
     .box {
       background: #151a2d;
-      padding: 24px;
+      padding: 20px;
       border-radius: 12px;
       text-align: center;
       width: 260px;
@@ -32,12 +33,12 @@
       border: none;
       border-radius: 8px;
       color: #fff;
-      font-size: 16px;
+      font-size: 15px;
     }
 
     .msg {
-      margin-top: 15px;
-      font-size: 14px;
+      margin-top: 12px;
+      font-size: 13px;
       word-break: break-all;
     }
   </style>
@@ -45,7 +46,7 @@
 
 <body>
   <div class="box">
-    <h2>🎮 Sol Mini Game</h2>
+    <h3>🎮 Sol Mini Game</h3>
 
     <button onclick="connect()">Connect Phantom</button>
     <button onclick="play()">Play (0.001 SOL)</button>
@@ -65,14 +66,12 @@
       LAMPORTS_PER_SOL
     } = solanaWeb3;
 
-    // 🔴 ĐỔI VÍ NÀY THÀNH VÍ CỦA BẠN
+    // 🔥 DEVNET
+    const connection = new Connection("https://api.devnet.solana.com");
+
+    // 🔥 VÍ NHẬN TIỀN (CỦA BẠN)
     const GAME_WALLET = new PublicKey(
       "Dz73z9YtS5F6DwN8U3wuhHYGi2DiTjavvNbTcVTau3W6"
-    );
-
-    const connection = new Connection(
-      "https://api.devnet.solana.com",
-      "confirmed"
     );
 
     let wallet = null;
@@ -81,7 +80,6 @@
       document.getElementById("msg").innerText = t;
     }
 
-    // CONNECT PHANTOM
     async function connect() {
       if (!window.solana || !window.solana.isPhantom) {
         alert("Cài Phantom trước");
@@ -89,35 +87,34 @@
       }
 
       const res = await window.solana.connect();
-      wallet = res;
-      msg("Đã kết nối:\n" + wallet.publicKey.toString());
+      wallet = res.publicKey;
+      msg("Đã kết nối:\n" + wallet.toString());
     }
 
-    // PLAY GAME – FIX ĐẦY ĐỦ
     async function play() {
       if (!wallet) {
         alert("Chưa connect ví");
         return;
       }
 
-      const tx = new Transaction().add(
+      const tx = new Transaction();
+
+      tx.add(
         SystemProgram.transfer({
-          fromPubkey: wallet.publicKey,
+          fromPubkey: wallet,
           toPubkey: GAME_WALLET,
           lamports: Math.floor(0.001 * LAMPORTS_PER_SOL),
         })
       );
 
-      // 🔥 BẮT BUỘC – nếu thiếu Phantom sẽ KHÔNG hiện
-      tx.feePayer = wallet.publicKey;
+      // 🔥 BẮT BUỘC – nếu thiếu Phantom sẽ KHÔNG popup
+      tx.feePayer = wallet;
       const { blockhash } = await connection.getLatestBlockhash();
       tx.recentBlockhash = blockhash;
 
       // 👉 PHANTOM POPUP Ở ĐÂY
       const signedTx = await window.solana.signTransaction(tx);
-      const sig = await connection.sendRawTransaction(
-        signedTx.serialize()
-      );
+      const sig = await connection.sendRawTransaction(signedTx.serialize());
       await connection.confirmTransaction(sig);
 
       const win = Math.random() < 0.5;
