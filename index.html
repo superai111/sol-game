@@ -1,80 +1,128 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <title>Sol Mini Game</title>
+
   <style>
     body {
-      background:#0b0f19;
-      color:#fff;
-      font-family:Arial;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
+      margin: 0;
+      height: 100vh;
+      background: #0b0f19;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
+
     .box {
-      background:#151a2d;
-      padding:20px;
-      border-radius:12px;
-      width:320px;
-      text-align:center;
+      background: #151a2d;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      width: 260px;
     }
+
     button {
-      width:100%;
-      padding:12px;
-      margin-top:10px;
-      background:#6c5ce7;
-      border:none;
-      border-radius:8px;
-      color:#fff;
-      font-size:16px;
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: #6c5ce7;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 16px;
     }
-    .msg { margin-top:15px; }
+
+    .msg {
+      margin-top: 15px;
+      font-size: 14px;
+      word-break: break-all;
+    }
   </style>
 </head>
+
 <body>
-<div class="box">
-  <h2>🎮 Sol Mini Game</h2>
-  <button onclick="connect()">Connect Phantom</button>
-  <button onclick="play()">Play (0.001 SOL)</button>
-  <div class="msg" id="msg"></div>
-</div>
+  <div class="box">
+    <h2>🎮 Sol Mini Game</h2>
 
-<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
-<script>
-const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = solanaWeb3;
+    <button onclick="connect()">Connect Phantom</button>
+    <button onclick="play()">Play (0.001 SOL)</button>
 
-const connection = new Connection("https://api.devnet.solana.com");
-const GAME_WALLET = new PublicKey("Dz73z9YtS5F6DwN8U3wuhhYGi2DiTjavvNbTcVTau3W6");
+    <div class="msg" id="msg"></div>
+  </div>
 
-let wallet = null;
+  <!-- Solana Web3 -->
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
 
-async function connect() {
-  if (!window.solana) return alert("Cài Phantom trước");
-  wallet = await window.solana.connect();
-  msg("Đã kết nối: " + wallet.publicKey.toString());
-}
+  <script>
+    const {
+      Connection,
+      PublicKey,
+      Transaction,
+      SystemProgram,
+      LAMPORTS_PER_SOL
+    } = solanaWeb3;
 
-async function play() {
-  if (!wallet) return alert("Chưa connect ví");
+    // 🔴 ĐỔI VÍ NÀY THÀNH VÍ CỦA BẠN
+    const GAME_WALLET = new PublicKey(
+      "Dz73z9YtS5F6DwN8U3wuhHYGi2DiTjavvNbTcVTau3W6"
+    );
 
-  const tx = new Transaction().add(
-    SystemProgram.transfer({
-      fromPubkey: wallet.publicKey,
-      toPubkey: GAME_WALLET,
-      lamports: 0.001 * LAMPORTS_PER_SOL
-    })
-  );
+    const connection = new Connection(
+      "https://api.devnet.solana.com",
+      "confirmed"
+    );
 
-  const sig = await window.solana.signAndSendTransaction(tx);
-  await connection.confirmTransaction(sig.signature);
+    let wallet = null;
 
-  const win = Math.random() < 0.5;
-  msg(win ? "🎉 YOU WIN" : "❌ YOU LOSE");
-}
+    function msg(t) {
+      document.getElementById("msg").innerText = t;
+    }
 
-function msg(t){ document.getElementById("msg").innerText = t; }
-</script>
+    // CONNECT PHANTOM
+    async function connect() {
+      if (!window.solana || !window.solana.isPhantom) {
+        alert("Cài Phantom trước");
+        return;
+      }
+
+      const res = await window.solana.connect();
+      wallet = res;
+      msg("Đã kết nối:\n" + wallet.publicKey.toString());
+    }
+
+    // PLAY GAME – FIX ĐẦY ĐỦ
+    async function play() {
+      if (!wallet) {
+        alert("Chưa connect ví");
+        return;
+      }
+
+      const tx = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: GAME_WALLET,
+          lamports: Math.floor(0.001 * LAMPORTS_PER_SOL),
+        })
+      );
+
+      // 🔥 BẮT BUỘC – nếu thiếu Phantom sẽ KHÔNG hiện
+      tx.feePayer = wallet.publicKey;
+      const { blockhash } = await connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+
+      // 👉 PHANTOM POPUP Ở ĐÂY
+      const signedTx = await window.solana.signTransaction(tx);
+      const sig = await connection.sendRawTransaction(
+        signedTx.serialize()
+      );
+      await connection.confirmTransaction(sig);
+
+      const win = Math.random() < 0.5;
+      msg(win ? "🎉 YOU WIN" : "❌ YOU LOSE");
+    }
+  </script>
 </body>
 </html>
